@@ -1,0 +1,23 @@
+<Solution>
+  <Folder Name="/1- PA.Domain/">
+    <Project Path="PrjAuth.Domain/PrjAuth.Domain.csproj" />
+  </Folder>
+  <Folder Name="/2- PA.Infra/">
+    <Project Path="PrjAuth.Infra/PrjAuth.Infra.csproj" />
+  </Folder>
+  <Folder Name="/3- PA.Application/">
+    <Project Path="PrjAuth.Application/PrjAuth.Application.csproj" />
+  </Folder>
+  <Folder Name="/4- PA.API/">
+    <Project Path="PrjAuth.Api/PrjAuth.Api.csproj" />
+  </Folder>
+  <Folder Name="/5- PA.Tests/">
+    <Project Path="PrjAuth.Api.Tests/PrjAuth.Api.Tests.csproj" Id="c2423e50-807a-4503-936b-ee66a796e679" />
+    <Project Path="PrjAuth.Application.Tests/PrjAuth.Application.Tests.csproj" Id="3f72dfce-e809-4037-8c82-58517f5ba2dd" />
+    <Project Path="PrjAuth.Tests/PrjAuth.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".env" />
+    <File Path=".env.example" />
+  </Folder>
+</Solution>
