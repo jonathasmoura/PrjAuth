@@ -11,7 +11,9 @@
   <Folder Name="/4- PA.API/">
     <Project Path="PrjAuth.Api/PrjAuth.Api.csproj" />
   </Folder>
-  <Folder Name="/5- PA.Tests/" />
+  <Folder Name="/5- PA.Tests/">
+    <Project Path="PrjAuth.Application.Tests/PrjAuth.Application.Tests.csproj" Id="6614303b-efca-4442-92cf-6c63cb7934de" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".env" />
     <File Path=".env.example" />

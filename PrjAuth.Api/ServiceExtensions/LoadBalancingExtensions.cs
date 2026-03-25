@@ -1,16 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Caching.Distributed;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using PrjAuth.Application.Configuration;
 using PrjAuth.Application.Contracts.Implements;
 using PrjAuth.Application.Contracts.Interfaces;
 using System.Text;
-using System.Threading.Tasks;
-using System;
 
 namespace PrjAuth.Api.ServiceExtensions
 {
@@ -41,6 +35,27 @@ namespace PrjAuth.Api.ServiceExtensions
 				return new LoadBalancedTokenConfiguration(configuration, cache, logger);
 			});
 
+			
+			services.AddSingleton(provider =>
+			{
+				var lbConfig = provider.GetRequiredService<LoadBalancedTokenConfiguration>();
+				var primary = string.Empty;
+				var secondary = string.Empty;
+
+				try
+				{
+					primary = lbConfig.GetPrimarySecretAsync().GetAwaiter().GetResult() ?? string.Empty;
+					secondary = lbConfig.GetSecondarySecretAsync().GetAwaiter().GetResult() ?? string.Empty;
+				}
+				catch (Exception ex)
+				{
+					var logger = provider.GetService<ILogger<LoadBalancedTokenConfiguration>>();
+					logger?.LogWarning(ex, "Falha ao recuperar segredos JWT do cache; usando valores locais.");
+				}
+
+				return new TokenSecrets(primary, secondary);
+			});
+
 			services.AddScoped<ITokenBlackListService, TokenBlackListService>();
 			services.AddScoped<ITokenValidator, SecurityHardenedTokenValidator>();
 			return services;
@@ -50,8 +65,10 @@ namespace PrjAuth.Api.ServiceExtensions
 		{
 			var section = configuration.GetSection("JwtSettings");
 			if (!section.Exists()) section = configuration.GetSection("Jwt");
-			var primary = section["PrimaryKey"] ?? section["Key"] ?? string.Empty;
-			var secondary = section["SecondaryKey"] ?? string.Empty;
+
+			var tokenSecrets = services.BuildServiceProvider().GetService<TokenSecrets>();
+			var primary = tokenSecrets?.Primary ?? section["PrimaryKey"] ?? section["Key"] ?? string.Empty;
+			var secondary = tokenSecrets?.Secondary ?? section["SecondaryKey"] ?? string.Empty;
 			var issuer = section["Issuer"] ?? string.Empty;
 			var audience = section["Audience"] ?? string.Empty;
 

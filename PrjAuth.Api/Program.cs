@@ -9,9 +9,6 @@ using PrjAuth.Application.Configuration;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddDIInfrastuctureServices(builder.Configuration)
-                .AddDIApplicationServices(builder.Configuration);
-
 builder.Services.AddLoadBalancedTokenConfiguration(builder.Configuration);
 
 builder.Services.AddLoadBalancedJwtAuthentication(builder.Configuration);
@@ -22,18 +19,7 @@ builder.Services.AddControllers();
 
 builder.Services.AddHealthChecks();
 
-builder.Services.AddDistributedMemoryCache();
-
 builder.Services.Configure<PrjAuth.Api.Config.RateLimitingOptions>(builder.Configuration.GetSection("RateLimiting"));
-
-using (var tempProvider = builder.Services.BuildServiceProvider())
-{
-	var lbConfig = tempProvider.GetRequiredService<LoadBalancedTokenConfiguration>();
-	var primary = await lbConfig.GetPrimarySecretAsync().ConfigureAwait(false);
-	var secondary = await lbConfig.GetSecondarySecretAsync().ConfigureAwait(false);
-
-	builder.Services.AddSingleton(new TokenSecrets(primary ?? string.Empty, secondary ?? string.Empty));
-}
 
 var app = builder.Build();
 

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using System.IdentityModel.Tokens.Jwt;
 using PrjAuth.Application.Configuration;
+using Microsoft.IdentityModel.Tokens;
 
 namespace PrjAuth.Application.Contracts.Implements
 {
@@ -100,7 +101,21 @@ namespace PrjAuth.Application.Contracts.Implements
 				?? _httpContextAccessor?.HttpContext?.Connection?.RemoteIpAddress?.ToString()
 				?? string.Empty;
 
-			( var replacement, var newRaw ) = await _refreshTokenService.RotateRefreshTokenAsync(refreshToken, ip);
+			var (replacement, newRaw) = await _refreshTokenService.RotateRefreshTokenAsync(refreshToken, ip);
+			try
+			{
+			}
+			catch (SecurityTokenException ste)
+			{
+				_logger.LogWarning(ste, "Falha ao rotacionar refresh token: {Message}", ste.Message);
+				
+				return null;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Erro inesperado ao rotacionar refresh token");
+				return null;
+			}
 
 			if (replacement == null || string.IsNullOrEmpty(newRaw))
 			{
