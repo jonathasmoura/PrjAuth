@@ -91,6 +91,25 @@ namespace PrjAuth.Application.Contracts.Implements
 
 			try
 			{
+				JwtSecurityToken preToken;
+				try
+				{
+					preToken = tokenHandler.ReadJwtToken(token);
+				}
+				catch
+				{
+					_logger.LogWarning("Token malformado ao tentar ler header.");
+					return null;
+				}
+
+				var preAlg = preToken?.Header.Alg ?? string.Empty;
+				if (!preAlg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase)
+					&& !preAlg.Equals(SecurityAlgorithms.HmacSha256Signature, StringComparison.InvariantCultureIgnoreCase))
+				{
+					_logger.LogWarning("Algoritmo de assinatura inválido no header do token: {Alg}", preAlg);
+					return null;
+				}
+
 				var primary = _primarySecret;
 				var secondary = _secondarySecret;
 
