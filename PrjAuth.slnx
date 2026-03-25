@@ -12,8 +12,6 @@
     <Project Path="PrjAuth.Api/PrjAuth.Api.csproj" />
   </Folder>
   <Folder Name="/5- PA.Tests/">
-    <Project Path="PrjAuth.Api.Tests/PrjAuth.Api.Tests.csproj" Id="c2423e50-807a-4503-936b-ee66a796e679" />
-    <Project Path="PrjAuth.Application.Tests/PrjAuth.Application.Tests.csproj" Id="3f72dfce-e809-4037-8c82-58517f5ba2dd" />
     <Project Path="PrjAuth.Tests/PrjAuth.Tests.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">

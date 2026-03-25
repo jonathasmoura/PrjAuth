@@ -38,7 +38,7 @@ namespace PrjAuth.Api.Controllers
 			var cookieOptions = new CookieOptions
 			{
 				HttpOnly = true,
-				Secure = true, // HTTPS only
+				Secure = true,
 				SameSite = SameSiteMode.Strict,
 				Expires = DateTime.UtcNow.AddDays(7)
 			};
@@ -88,10 +88,8 @@ namespace PrjAuth.Api.Controllers
 		[Authorize]
 		public async Task<IActionResult> Logout([FromBody] LogoutDto? request)
 		{
-			// 1) Obtém refresh token do cookie (bom padrão para SPAs: cookie HttpOnly Secure SameSite)
 			var refreshToken = Request.Cookies["refreshToken"];
 
-			// 2) Obtém access token preferencialmente do header Authorization; fallback para corpo
 			string? accessToken = null;
 			var authHeader = Request.Headers["Authorization"].FirstOrDefault();
 			if (!string.IsNullOrWhiteSpace(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -103,13 +101,11 @@ namespace PrjAuth.Api.Controllers
 				accessToken = request!.AccessToken;
 			}
 
-			// 3) Revoke do refresh token (se presente) — isso já revoga/rotaciona no serviço
 			if (!string.IsNullOrEmpty(refreshToken))
 			{
 				await _authService.RevokeTokenAsync(refreshToken);
 			}
 
-			// 4) Blacklist do access token JTI (se fornecido) — usa helpers centralizados no TokenService
 			if (!string.IsNullOrWhiteSpace(accessToken))
 			{
 				try
@@ -124,11 +120,9 @@ namespace PrjAuth.Api.Controllers
 				catch (Exception ex)
 				{
 					_logger.LogWarning(ex, "Falha ao extrair jti do access token informado no logout.");
-					// não interrompe o logout — garantimos que refresh token foi revogado acima
 				}
 			}
 
-			// 5) Limpa cookie de refresh no cliente
 			Response.Cookies.Delete("refreshToken");
 
 			_logger.LogInformation("User {User} logged out", User.Identity?.Name);

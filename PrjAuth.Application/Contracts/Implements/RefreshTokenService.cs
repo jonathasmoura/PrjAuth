@@ -39,39 +39,33 @@ namespace PrjAuth.Application.Contracts.Implements
 			await _refreshTokenRepository.AddAsync(refreshToken);
 			await _unitOfWork.SaveChangesAsync();
 
-			// Retorna a entidade com o token hash armazenado; o valor puro (token) deve ser entregue ao cliente
 			return refreshToken;
 		}
 
-		//Ensure the method signature matches the interface exactly
 		public async Task<(RefreshToken? Replacement, string? RawToken)> RotateRefreshTokenAsync(string existingToken, string createdByIp)
 		{
 			var current = await _refreshTokenRepository.GetByTokenAsync(existingToken);
 
-			// Se token não existe ou não está ativo
 			if (current == null || !current.IsActive)
 			{
 				_logger.LogWarning("Tentativa de rotação de token de atualização inválida. Token encontrado? {HasToken}", current != null);
 				throw new SecurityTokenException("Token de atualização inválido");
 			}
 
-			// Detecta reutilização: token já foi revogado e já foi substituído (indicador de replay/ataque)
 			if (current.Revoked && !string.IsNullOrEmpty(current.ReplacedByToken))
 			{
 				_logger.LogWarning("Detecção de reutilização do token de atualização para o usuário {UserId}. Revogando todos os tokens.", current.UserId);
 
-				// Revoga todos os tokens do usuário para conter o possível comprometimento
 				await _refreshTokenRepository.RevokeAllUserTokensAsync(current.UserId, createdByIp);
 				await _unitOfWork.SaveChangesAsync();
 
 				throw new SecurityTokenException("Detecção de reutilização do token. Faça login novamente.");
 			}
 
-			// Gera novo token de substituição (raw)
 			var newToken = GenerateTokenString();
 			var replacement = new RefreshToken
 			{
-				Token = ComputeSha256Hash(newToken), // armazenamos o hash
+				Token = ComputeSha256Hash(newToken),
 				Username = current.Username,
 				UserId = current.UserId,
 				CreatedAt = DateTime.UtcNow,
@@ -80,17 +74,15 @@ namespace PrjAuth.Application.Contracts.Implements
 				Revoked = false
 			};
 
-			// Marca o atual como revogado e aponta para o novo (armazenamos hash)
 			current.Revoked = true;
 			current.RevokedAt = DateTime.UtcNow;
 			current.RevokedByIp = createdByIp;
-			current.ReplacedByToken = replacement.Token; // armazenamos hash
+			current.ReplacedByToken = replacement.Token;
 
 			await _refreshTokenRepository.UpdateAsync(current);
 			await _refreshTokenRepository.AddAsync(replacement);
 			await _unitOfWork.SaveChangesAsync();
 
-			// Retorna a entidade (com hash) e o token raw gerado para ser entregue ao cliente
 			return (replacement, newToken);
 		}
 
@@ -111,7 +103,6 @@ namespace PrjAuth.Application.Contracts.Implements
 			await _unitOfWork.SaveChangesAsync();
 		}
 
-		// NOVO: salva um refresh token já gerado (hash antes de persistir)
 		public async Task SaveRefreshTokenAsync(Guid userId, string refreshToken, string createdByIp = "")
 		{
 			var hashed = ComputeSha256Hash(refreshToken);

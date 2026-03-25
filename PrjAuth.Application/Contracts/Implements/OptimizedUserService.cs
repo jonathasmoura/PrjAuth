@@ -37,13 +37,11 @@ namespace PrjAuth.Application.Contracts.Implements
 
 			var cacheKey = $"user:{id}";
 
-			// 1) Fast path: memory cache
 			if (_memoryCache.TryGetValue(cacheKey, out UserDto cachedUser))
 			{
 				return cachedUser;
 			}
 
-			// 2) Distributed cache (Redis) - deserializa se presente
 			try
 			{
 				var cachedBytes = await _distributedCache.GetAsync(cacheKey).ConfigureAwait(false);
@@ -53,7 +51,6 @@ namespace PrjAuth.Application.Contracts.Implements
 					var dto = JsonSerializer.Deserialize<UserDto>(json);
 					if (dto != null)
 					{
-						// popula cache local para leituras subsequentes rápidas
 						_memoryCache.Set(cacheKey, dto, CacheTtl);
 						return dto;
 					}
@@ -62,10 +59,8 @@ namespace PrjAuth.Application.Contracts.Implements
 			catch (Exception ex)
 			{
 				_logger.LogWarning(ex, "Falha ao acessar cache distribuído para chave {CacheKey}. Continuando sem cache distribuído.", cacheKey);
-				// fallback: continue para buscar no repositório
 			}
 
-			// 3) Cache miss: buscar no repositório
 			var user = await _userRepository.GetByIdAsync(id);
 			if (user == null) return null;
 
@@ -77,7 +72,6 @@ namespace PrjAuth.Application.Contracts.Implements
 				Roles = user.Roles?.ToArray() ?? Array.Empty<string>()
 			};
 
-			// 4) Popula ambos caches (memory + distributed) de forma resiliente
 			try
 			{
 				_memoryCache.Set(cacheKey, userDto, CacheTtl);

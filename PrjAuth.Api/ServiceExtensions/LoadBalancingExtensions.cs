@@ -18,7 +18,6 @@ namespace PrjAuth.Api.ServiceExtensions
 	{
 		public static IServiceCollection AddLoadBalancedTokenConfiguration(this IServiceCollection services, IConfiguration configuration)
 		{
-			// Opcional: habilitar Redis se configurado
 			var redisSection = configuration.GetSection("Redis");
 			var useRedis = bool.TryParse(configuration["Jwt:UseRedis"], out var u) ? u : redisSection.Exists();
 
@@ -32,11 +31,9 @@ namespace PrjAuth.Api.ServiceExtensions
 			}
 			else
 			{
-				// Garante que exista uma implementação de IDistributedCache mesmo quando não houver Redis
 				services.AddDistributedMemoryCache();
 			}
 
-			// Registra configuração (pode depender do IDistributedCache)
 			services.AddSingleton<LoadBalancedTokenConfiguration>(provider =>
 			{
 				var cache = provider.GetRequiredService<IDistributedCache>();
@@ -44,9 +41,7 @@ namespace PrjAuth.Api.ServiceExtensions
 				return new LoadBalancedTokenConfiguration(configuration, cache, logger);
 			});
 
-			// Lista negra distribuída (sua implementação já usa IDistributedCache)
 			services.AddScoped<ITokenBlackListService, TokenBlackListService>();
-			// registrar validator
 			services.AddScoped<ITokenValidator, SecurityHardenedTokenValidator>();
 			return services;
 		}
@@ -60,7 +55,6 @@ namespace PrjAuth.Api.ServiceExtensions
 			var issuer = section["Issuer"] ?? string.Empty;
 			var audience = section["Audience"] ?? string.Empty;
 
-			// Use um único AuthenticationBuilder e defina o esquema padrão como "primary"
 			var authBuilder = services.AddAuthentication(options =>
 			{
 				options.DefaultAuthenticateScheme = "primary";
@@ -83,7 +77,6 @@ namespace PrjAuth.Api.ServiceExtensions
 					ClockSkew = System.TimeSpan.FromMinutes(1)
 				};
 
-				// Rejeita tokens cuja jti esteja na blacklist
 				options.Events = new JwtBearerEvents
 				{
 					OnTokenValidated = async context =>
@@ -99,7 +92,6 @@ namespace PrjAuth.Api.ServiceExtensions
 									var isBlacklisted = await blackList.IsTokenBlacklistedAsync(jti).ConfigureAwait(false);
 									if (isBlacklisted)
 									{
-										// marca falha para que o middleware retorne 401
 										context.Fail("Token is blacklisted.");
 										return;
 									}
@@ -118,7 +110,6 @@ namespace PrjAuth.Api.ServiceExtensions
 
 			if (!string.IsNullOrWhiteSpace(secondary))
 			{
-				// registra secondary no mesmo builder e aplica a mesma checagem de blacklist
 				authBuilder.AddJwtBearer("secondary", options =>
 				{
 					options.RequireHttpsMetadata = true;

@@ -19,7 +19,6 @@ namespace PrjAuth.Application.Configuration
 			_cache = cache ?? throw new ArgumentNullException(nameof(cache));
 			_logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-			// Suporta seção longa ("JwtSettings") e seção curta ("Jwt")
 			var jwtSettings = new JwtSettingsDto();
 			var sectionFull = configuration.GetSection("JwtSettings");
 			var sectionShort = configuration.GetSection("Jwt");
@@ -44,7 +43,6 @@ namespace PrjAuth.Application.Configuration
 			_settings = jwtSettings;
 		}
 
-		// Retorna o segredo primário (pode vir do cache distribuído para suportar rotação)
 		public async Task<string> GetPrimarySecretAsync()
 		{
 			try
@@ -63,7 +61,6 @@ namespace PrjAuth.Application.Configuration
 			return _settings.SecretKey ?? string.Empty;
 		}
 
-		// Retorna segredo secundário (opcional)
 		public async Task<string> GetSecondarySecretAsync()
 		{
 			try
@@ -79,7 +76,7 @@ namespace PrjAuth.Application.Configuration
 				_logger.LogWarning(ex, "Falha ao obter secondary secret do cache distribuído. Usando configuração local.");
 			}
 
-			return string.Empty; // optional secondary
+			return string.Empty;
 		}
 
 		public int AccessTokenExpirationMinutes => _settings.AccessTokenExpirationMinutes;

@@ -64,7 +64,6 @@ namespace PrjAuth.Application.Contracts.Implements
 
 		public async Task<LoginResponseDto> LoginUserAsync(LoginUserDto loginUserDto)
 		{
-			// Validação básica de entrada
 			if (loginUserDto == null || string.IsNullOrWhiteSpace(loginUserDto.Email) || string.IsNullOrWhiteSpace(loginUserDto.Password))
 			{
 				return new LoginResponseDto { Flag = false, Message = "Credenciais inválidas" };
@@ -76,7 +75,6 @@ namespace PrjAuth.Application.Contracts.Implements
 				return new LoginResponseDto { Flag = false, Message = "Usuário ou senha inválidos" };
 			}
 
-			// Gera access token e refresh token
 			var userDto = new UserDto
 			{
 				Id = userCred.Id,
@@ -88,7 +86,6 @@ namespace PrjAuth.Application.Contracts.Implements
 			var accessToken = _tokenService.GenerateAccessToken(userDto);
 			var refreshToken = _tokenService.GenerateRefreshToken();
 
-			// Persiste refresh token (hash será feito pelo serviço)
 			await _refreshTokenService.SaveRefreshTokenAsync(userDto.Id, refreshToken);
 
 			return new LoginResponseDto
@@ -109,8 +106,8 @@ namespace PrjAuth.Application.Contracts.Implements
 				};
 
 			if (string.IsNullOrWhiteSpace(registerUserDto.Email) ||
-			    string.IsNullOrWhiteSpace(registerUserDto.Password) ||
-			    string.IsNullOrWhiteSpace(registerUserDto.Name))
+				string.IsNullOrWhiteSpace(registerUserDto.Password) ||
+				string.IsNullOrWhiteSpace(registerUserDto.Name))
 			{
 				return new RegisterResponseDto
 				{

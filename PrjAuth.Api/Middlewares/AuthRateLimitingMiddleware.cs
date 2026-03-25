@@ -40,7 +40,6 @@ namespace PrjAuth.Api.Middlewares
 					if (!string.IsNullOrEmpty(value) && int.TryParse(value, out var parsed))
 						count = parsed;
 
-					// Se excedeu o limite -> 429
 					if (count >= _options.MaxAttempts)
 					{
 						_logger.LogWarning("Rate limit excedido para IP {Ip} no caminho {Path}", clientIp, path);
@@ -50,7 +49,6 @@ namespace PrjAuth.Api.Middlewares
 						return;
 					}
 
-					// Incrementa contador e (re)define expiration
 					count++;
 					var cacheOptions = new DistributedCacheEntryOptions
 					{
@@ -62,7 +60,6 @@ namespace PrjAuth.Api.Middlewares
 			}
 			catch (Exception ex)
 			{
-				// Em caso de erro no rate limiter, não bloquear o fluxo de autenticação: log e continue
 				_logger.LogError(ex, "Erro durante verificação de rate limiting - permitindo requisição");
 			}
 
@@ -74,15 +71,12 @@ namespace PrjAuth.Api.Middlewares
 			if (string.IsNullOrWhiteSpace(path)) return false;
 			var p = path.ToLowerInvariant();
 
-			// Verifica se o path começa com algum dos protegidos; também permite filtrar por método (ex.: POST)
 			foreach (var protectedPath in _options.ProtectedPaths ?? Enumerable.Empty<string>())
 			{
 				var normalized = protectedPath.ToLowerInvariant();
 				if (p.StartsWith(normalized, StringComparison.OrdinalIgnoreCase))
 				{
-					// filtra requisições por método se desejar; aqui assumimos POST para endpoints de autenticação
 					if (method.Equals("POST", StringComparison.OrdinalIgnoreCase)) return true;
-					// se quiser proteger GETs, ajuste a lógica
 				}
 			}
 			return false;
@@ -90,19 +84,16 @@ namespace PrjAuth.Api.Middlewares
 
 		private string GetClientIp(HttpContext context)
 		{
-			// X-Forwarded-For (quando atrás de proxy/load-balancer)
 			if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var values))
 			{
 				var first = values.FirstOrDefault();
 				if (!string.IsNullOrEmpty(first))
 				{
-					// pode conter lista de IPs
 					var ip = first.Split(',').Select(x => x.Trim()).FirstOrDefault();
 					if (IPAddress.TryParse(ip, out _)) return ip!;
 				}
 			}
 
-			// Fallback para conexão remota
 			var remote = context.Connection.RemoteIpAddress;
 			return remote?.ToString() ?? "unknown";
 		}

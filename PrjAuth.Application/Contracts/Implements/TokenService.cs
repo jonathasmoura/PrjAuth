@@ -83,7 +83,6 @@ namespace PrjAuth.Application.Contracts.Implements
 			return Convert.ToBase64String(randomNumber);
 		}
 
-		// Assinatura atualizada: remove argumento opcional
 		public ClaimsPrincipal? ValidateToken(string token, bool validateLifetime)
 		{
 			if (string.IsNullOrWhiteSpace(token)) return null;
@@ -151,21 +150,18 @@ namespace PrjAuth.Application.Contracts.Implements
 			return ValidateToken(token, validateLifetime: false);
 		}
 
-		// Helpers implementados (agora validam assinatura antes de usar payload)
 		public DateTime? GetTokenExpirationUtc(string token)
 		{
 			if (string.IsNullOrWhiteSpace(token)) return null;
 
 			try
 			{
-				// Primeiro assegura que a assinatura é válida (ignora lifetime)
 				var principal = ValidateToken(token, validateLifetime: false);
 				if (principal == null) return null;
 
 				var handler = new JwtSecurityTokenHandler();
 				var jwt = handler.ReadJwtToken(token);
 
-				// Use the new JwtPayload.Expiration (long?) property instead of the obsolete Exp (int?)
 				var exp = jwt.Payload.Expiration;
 				if (exp.HasValue)
 				{
@@ -193,12 +189,10 @@ namespace PrjAuth.Application.Contracts.Implements
 
 			try
 			{
-				// Valida assinatura (mas não valida lifetime)
 				var principal = ValidateToken(token, validateLifetime: false);
 				var jti = principal?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
 				if (!string.IsNullOrWhiteSpace(jti)) return jti;
 
-				// fallback inseguro removido: não confiar em parse sem validação
 				return null;
 			}
 			catch (Exception ex)

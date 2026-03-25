@@ -47,24 +47,19 @@ namespace PrjAuth.Application.Contracts.Implements
 					UserAgent = userAgent
 				};
 
-				// Persistir evento (assíncrono)
 				await _securityEventRepository.SaveAsync(securityEvent).ConfigureAwait(false);
 
-				// Logging estruturado (não logar PII sensível)
 				_logger.LogInformation("Security event {EventType} recorded for user {UserId} ip {Ip} trace {TraceId}",
 					eventType, userId ?? "<anonymous>", ip ?? "<unknown>", traceId ?? "<none>");
 
-				// Alertas: policy-driven, assíncrono
 				if (string.Equals(eventType, "MULTIPLE_FAILED_LOGINS", StringComparison.OrdinalIgnoreCase))
 				{
-					// Não bloquear o fluxo principal — enviar alerta de forma resiliente
 					await _alertingService.SendSecurityAlertAsync(
 						$"Multiple failed login attempts for user {userId ?? "<unknown>"} from {ip ?? "<unknown>"}").ConfigureAwait(false);
 				}
 			}
 			catch (Exception ex)
 			{
-				// Trata falhas no monitoramento sem propagar (defesa em profundidade)
 				_logger.LogError(ex, "Failed to log security event {EventType} for user {UserId}", eventType, userId);
 			}
 		}
@@ -73,7 +68,6 @@ namespace PrjAuth.Application.Contracts.Implements
 		{
 			if (context == null) return null;
 
-			// Respeitar X-Forwarded-For quando atrás de load balancer / proxy
 			if (context.Request.Headers.TryGetValue("X-Forwarded-For", out var xff) && !string.IsNullOrWhiteSpace(xff.FirstOrDefault()))
 			{
 				var ips = xff.ToString().Split(',', StringSplitOptions.RemoveEmptyEntries);

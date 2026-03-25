@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Caching.StackExchangeRedis; // <--- adicionar
 using Microsoft.Extensions.Logging;
 using PrjAuth.Application.Contracts.Implements;
 using PrjAuth.Application.Contracts.Interfaces;

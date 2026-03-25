@@ -22,7 +22,7 @@ namespace PrjAuth.Infra.Repositories
 		public Task AddAsync(RefreshToken refreshToken)
 		{
 			_dbAuthContext.RefreshTokens.Add(refreshToken);
-			// Commit ficará a cargo do UnitOfWork / camada de aplicação
+			
 			return Task.CompletedTask;
 		}
 
@@ -38,18 +38,17 @@ namespace PrjAuth.Infra.Repositories
 		public Task UpdateAsync(RefreshToken refreshToken)
 		{
 			_dbAuthContext.RefreshTokens.Update(refreshToken);
-			// Commit ficará a cargo do UnitOfWork / camada de aplicação
+			
 			return Task.CompletedTask;
 		}
 
 		public Task DeleteAsync(RefreshToken refreshToken)
 		{
 			_dbAuthContext.RefreshTokens.Remove(refreshToken);
-			// Commit ficará a cargo do UnitOfWork / camada de aplicação
+			
 			return Task.CompletedTask;
 		}
 
-		// Novo: revoga todos os tokens não revogados do usuário
 		public Task RevokeAllUserTokensAsync(Guid userId, string revokedByIp = "")
 		{
 			var tokens = _dbAuthContext.RefreshTokens
@@ -66,7 +65,7 @@ namespace PrjAuth.Infra.Repositories
 			}
 
 			_dbAuthContext.RefreshTokens.UpdateRange(tokens);
-			// Commit ficará a cargo do UnitOfWork / camada de aplicação
+			
 			return Task.CompletedTask;
 		}
 

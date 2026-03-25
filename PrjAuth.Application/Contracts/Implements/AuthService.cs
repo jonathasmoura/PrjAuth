@@ -141,7 +141,6 @@ namespace PrjAuth.Application.Contracts.Implements
 
 			await _refreshTokenService.RevokeRefreshTokenAsync(token, ip);
 
-			// NEW: Tentativa de extrair access token raw do header e usar helpers centralizados para jti/exp
 			try
 			{
 				var authHeader = _httpContextAccessor?.HttpContext?.Request?.Headers["Authorization"].FirstOrDefault();
@@ -157,7 +156,6 @@ namespace PrjAuth.Application.Contracts.Implements
 				}
 				else
 				{
-					// fallback: obter jti a partir do ClaimsPrincipal (se presente)
 					var jtiFromUser = _httpContextAccessor?.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
 					if (!string.IsNullOrEmpty(jtiFromUser))
 					{

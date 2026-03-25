@@ -12,42 +12,26 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDIInfrastuctureServices(builder.Configuration)
                 .AddDIApplicationServices(builder.Configuration);
 
-// Adiciona configuração de autenticação JWT (Application)
 builder.Services.AddLoadBalancedTokenConfiguration(builder.Configuration);
 
-// configurar autenticação usando primary/secondary
 builder.Services.AddLoadBalancedJwtAuthentication(builder.Configuration);
 
-// Swagger (Api extension)
 builder.Services.AddSwaggerWithJwt();
 
 builder.Services.AddControllers();
 
-// Health checks
 builder.Services.AddHealthChecks();
 
-// Registrar cache distribuído mínimo para desenvolvimento / testes.
-builder.Services.AddDistributedMemoryCache(); // resolve IDistributedCache
+builder.Services.AddDistributedMemoryCache();
 
-// configurar opções
 builder.Services.Configure<PrjAuth.Api.Config.RateLimitingOptions>(builder.Configuration.GetSection("RateLimiting"));
 
-// garantir IDistributedCache (ex.: Redis) já configurado em produção
-// builder.Services.AddStackExchangeRedisCache(...); // se for usar Redis
-
-// ---------------------------------------------------------------
-// Resolve e registra TokenSecrets de forma assíncrona no startup.
-// Isso evita chamadas .GetAwaiter().GetResult() em construtores.
-// ---------------------------------------------------------------
 using (var tempProvider = builder.Services.BuildServiceProvider())
 {
-	// Resolve LoadBalancedTokenConfiguration já registrado
 	var lbConfig = tempProvider.GetRequiredService<LoadBalancedTokenConfiguration>();
-	// Buscar secrets de forma assíncrona
 	var primary = await lbConfig.GetPrimarySecretAsync().ConfigureAwait(false);
 	var secondary = await lbConfig.GetSecondarySecretAsync().ConfigureAwait(false);
 
-	// Registrar TokenSecrets para injeção no TokenService
 	builder.Services.AddSingleton(new TokenSecrets(primary ?? string.Empty, secondary ?? string.Empty));
 }
 

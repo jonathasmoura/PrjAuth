@@ -30,11 +30,9 @@ namespace PrjAuth.Application.Contracts.Implements
 
 			try
 			{
-				// Valida assinatura/lifetime/issuer/audience via TokenService
 				var principal = _tokenService.ValidateToken(token, validateLifetime: true);
 				if (principal == null) return null;
 
-				// Checa blacklist pelo jti
 				var jti = principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
 				if (!string.IsNullOrEmpty(jti))
 				{

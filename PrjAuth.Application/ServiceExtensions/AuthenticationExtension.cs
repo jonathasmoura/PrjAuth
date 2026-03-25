@@ -14,7 +14,6 @@ namespace PrjAuth.Application.ServiceExtensions
 	{
 		public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
 		{
-			// Suporta ambas as seções (compatibilidade) e registra IOptions<JwtSettingsDto>
 			var jwtSettings = new JwtSettingsDto();
 
 			var sectionFull = configuration.GetSection("JwtSettings");
@@ -47,7 +46,6 @@ namespace PrjAuth.Application.ServiceExtensions
 				throw new InvalidOperationException("Configuração JWT não encontrada. Configure 'JwtSettings' ou 'Jwt' no appsettings.");
 			}
 
-			// Validação explícita das opções para evitar start inválido
 			if (string.IsNullOrWhiteSpace(jwtSettings.SecretKey) || jwtSettings.SecretKey.Length < 32)
 			{
 				throw new InvalidOperationException("Jwt secret key inválida. Configure um valor forte em 'Jwt:Key' ou 'JwtSettings:SecretKey' (mínimo 32 caracteres).");

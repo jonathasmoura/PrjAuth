@@ -91,7 +91,6 @@ namespace PrjAuth.Application.Contracts.Implements
 			return Convert.ToBase64String(randomNumber);
 		}
 
-		// Assinatura atualizada: remove argumento opcional
 		public ClaimsPrincipal? ValidateToken(string token, bool validateLifetime)
 		{
 			if (string.IsNullOrWhiteSpace(token)) return null;
@@ -154,7 +153,6 @@ namespace PrjAuth.Application.Contracts.Implements
 
 			try
 			{
-				// Valida assinatura antes de confiar no payload
 				var principal = ValidateToken(token, validateLifetime: false);
 				if (principal == null) return null;
 
@@ -183,7 +181,6 @@ namespace PrjAuth.Application.Contracts.Implements
 
 			try
 			{
-				// Valida assinatura (mas não valida lifetime)
 				var principal = ValidateToken(token, validateLifetime: false);
 				if (principal == null) return null;
 

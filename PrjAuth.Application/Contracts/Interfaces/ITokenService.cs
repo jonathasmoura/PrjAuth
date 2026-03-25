@@ -13,13 +13,9 @@ namespace PrjAuth.Application.Contracts.Interfaces
 	{
 		string GenerateAccessToken(UserDto user);
 		string GenerateRefreshToken();
-
-		// Removido default para evitar problemas com expression trees / Moq
 		ClaimsPrincipal? ValidateToken(string token, bool validateLifetime);
-
 		ClaimsPrincipal? GetPrincipalFromExpiredToken(string token);
 
-		// Helpers centralizados para leitura de claims sem validação de assinatura/lifetime
 		DateTime? GetTokenExpirationUtc(string token);
 
 		string? GetJti(string token);
