@@ -9,7 +9,7 @@ namespace PrjAuth.Domain.Interfaces
 {
 	public interface IGenericRepository<T> where T : EntityBase
 	{
-		Task<T> GetByIdAsync(Guid id);
+		Task<T?> GetByIdAsync(Guid id);
 		Task<IEnumerable<T>> GetAllAsync();
 		Task AddAsync(T entity);
 		Task DeleteAsync(T entity);

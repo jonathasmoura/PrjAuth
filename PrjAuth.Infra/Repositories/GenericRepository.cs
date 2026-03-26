@@ -24,10 +24,10 @@ namespace PrjAuth.Infra.Repositories
 			return await _dbAuthContext.Set<T>().ToListAsync();
 		}
 
-		public async Task<T> GetByIdAsync(Guid id)
+		public async Task<T?> GetByIdAsync(Guid id)
 		{
 			var entity = await _dbAuthContext.Set<T>().FindAsync(id);
-			return entity!;
+			return entity;
 		}
 
 		public async Task AddAsync(T entity)

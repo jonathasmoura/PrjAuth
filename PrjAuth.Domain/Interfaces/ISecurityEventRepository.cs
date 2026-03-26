@@ -5,6 +5,6 @@ namespace PrjAuth.Domain.Interfaces
 {
 	public interface ISecurityEventRepository
 	{
-		Task SaveAsync(SecurityEvent securityEvent);
+		Task AddAsync(SecurityEvent securityEvent);
 	}
 }

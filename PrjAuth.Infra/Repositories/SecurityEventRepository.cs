@@ -1,6 +1,7 @@
 ﻿using PrjAuth.Domain.Entities;
 using PrjAuth.Domain.Interfaces;
 using PrjAuth.Infra.DataContexts;
+using System.Threading.Tasks;
 
 namespace PrjAuth.Infra.Repositories
 {
@@ -13,10 +14,10 @@ namespace PrjAuth.Infra.Repositories
 			_context = context;
 		}
 
-		public async Task SaveAsync(SecurityEvent securityEvent)
+		public Task AddAsync(SecurityEvent securityEvent)
 		{
 			_context.Set<SecurityEvent>().Add(securityEvent);
-			await _context.SaveChangesAsync().ConfigureAwait(false);
+			return Task.CompletedTask;
 		}
 	}
 }
