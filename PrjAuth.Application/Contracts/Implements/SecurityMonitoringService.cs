@@ -15,17 +15,20 @@ namespace PrjAuth.Application.Contracts.Implements
 		private readonly IAlertingService _alertingService;
 		private readonly IHttpContextAccessor _httpContextAccessor;
 		private readonly ILogger<SecurityMonitoringService> _logger;
+		private readonly IUnitOfWork _unitOfWork;
 
 		public SecurityMonitoringService(
 			ISecurityEventRepository securityEventRepository,
 			IAlertingService alertingService,
 			IHttpContextAccessor httpContextAccessor,
-			ILogger<SecurityMonitoringService> logger)
+			ILogger<SecurityMonitoringService> logger,
+			IUnitOfWork unitOfWork)
 		{
 			_securityEventRepository = securityEventRepository ?? throw new ArgumentNullException(nameof(securityEventRepository));
 			_alertingService = alertingService ?? throw new ArgumentNullException(nameof(alertingService));
 			_httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
 			_logger = logger ?? throw new ArgumentNullException(nameof(logger));
+			_unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
 		}
 
 		public async Task LogSecurityEventAsync(string eventType, string details, string? userId = null)
@@ -47,7 +50,9 @@ namespace PrjAuth.Application.Contracts.Implements
 					UserAgent = userAgent
 				};
 
-				await _securityEventRepository.SaveAsync(securityEvent).ConfigureAwait(false);
+				await _securityEventRepository.AddAsync(securityEvent).ConfigureAwait(false);
+
+				await _unitOfWork.SaveChangesAsync().ConfigureAwait(false);
 
 				_logger.LogInformation("Security event {EventType} recorded for user {UserId} ip {Ip} trace {TraceId}",
 					eventType, userId ?? "<anonymous>", ip ?? "<unknown>", traceId ?? "<none>");

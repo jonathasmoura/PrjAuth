@@ -4,7 +4,6 @@ using PrjAuth.Infra.DataContexts;
 using PrjAuth.Api.ServiceExtensions;
 using PrjAuth.Infra.ServiceExtensions;
 using PrjAuth.Api.Middlewares;
-using PrjAuth.Application.Configuration;
 using PrjAuth.Api.Config;
 
 var builder = WebApplication.CreateBuilder(args);
