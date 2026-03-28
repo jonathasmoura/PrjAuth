@@ -34,7 +34,7 @@ namespace PrjAuth.Api.Controllers
 			var response = await _authService.AuthenticateAsync(request);
 
 			if (response == null)
-				return Unauthorized(new { message = "Invalid username or password" });
+				return Unauthorized(new { message = "Usuário ou senha inválidos" });
 			var cookieOptions = new CookieOptions
 			{
 				HttpOnly = true,
@@ -59,12 +59,12 @@ namespace PrjAuth.Api.Controllers
 			var refreshToken = Request.Cookies["refreshToken"];
 
 			if (string.IsNullOrEmpty(refreshToken))
-				return Unauthorized(new { message = "Refresh token not found" });
+				return Unauthorized(new { message = "Refresh token não encontrado" });
 
 			var response = await _authService.RefreshTokenAsync(refreshToken);
 
 			if (response == null)
-				return Unauthorized(new { message = "Invalid refresh token" });
+				return Unauthorized(new { message = "Refresh token inválido" });
 
 			var cookieOptions = new CookieOptions
 			{
@@ -125,9 +125,9 @@ namespace PrjAuth.Api.Controllers
 
 			Response.Cookies.Delete("refreshToken");
 
-			_logger.LogInformation("User {User} logged out", User.Identity?.Name);
+			_logger.LogInformation("Usuário {User} deslogado", User.Identity?.Name);
 
-			return Ok(new { message = "Logged out successfully" });
+			return Ok(new { message = "Logout realizado com sucesso" });
 		}
 
 		[HttpPost("register")]

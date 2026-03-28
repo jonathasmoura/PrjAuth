@@ -1,35 +1,32 @@
-﻿using Microsoft.AspNetCore.Identity.Data;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using PrjAuth.Application.Contracts.Interfaces;
 using PrjAuth.Application.Dtos;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using System.IdentityModel.Tokens.Jwt;
 using PrjAuth.Application.Configuration;
-using Microsoft.IdentityModel.Tokens;
 
 namespace PrjAuth.Application.Contracts.Implements
 {
 	public class AuthService : IAuthService
 	{
-		private readonly ITokenService _tokenService ;
+		private readonly ITokenService _tokenService;
 		private readonly IUserService _userService;
 		private readonly IRefreshTokenService _refreshTokenService;
 		private readonly ITokenBlackListService _tokenBlackListService;
 		private readonly ILogger<AuthService> _logger;
-		private readonly IHttpContextAccessor _httpContextAccessor;
 		private readonly LoadBalancedTokenConfiguration _lbConfig;
+		private readonly IClientIpExtractor _clientIpExtractor;
+		private readonly ITokenBlacklistHelper _tokenBlacklistHelper;
 
 		public AuthService(
 			ITokenService tokenService,
 			IUserService userService,
 			IRefreshTokenService refreshTokenService,
 			ITokenBlackListService tokenBlackListService,
-			IHttpContextAccessor httpContextAccessor,
+			IClientIpExtractor clientIpExtractor,
+			ITokenBlacklistHelper tokenBlacklistHelper,
 			ILogger<AuthService> logger,
 			LoadBalancedTokenConfiguration lbConfig)
 		{
@@ -37,56 +34,55 @@ namespace PrjAuth.Application.Contracts.Implements
 			_userService = userService;
 			_refreshTokenService = refreshTokenService;
 			_tokenBlackListService = tokenBlackListService;
-			_httpContextAccessor = httpContextAccessor;
+			_clientIpExtractor = clientIpExtractor;
+			_tokenBlacklistHelper = tokenBlacklistHelper;
 			_logger = logger;
 			_lbConfig = lbConfig;
 		}
 
 		public async Task<AuthResponseDto?> AuthenticateAsync(LoginUserDto request)
 		{
+			var user = await _userService.ValidateCredentialsAsync(request.Email, request.Password);
+			if (user == null)
 			{
-				var user = await _userService.ValidateCredentialsAsync(request.Email, request.Password);
-				if (user == null)
-				{
-					_logger.LogWarning("Authentication failed for username: {Username}", request.Email);
-					return null;
-				}
-				var userDto = new UserDto
+				_logger.LogWarning("Falha na autenticação para o usuário: {Username}", request.Email);
+				return null;
+			}
+			var userDto = new UserDto
+			{
+				Id = user.Id,
+				Username = user.Username,
+				Email = user.Email,
+				Roles = user.Roles
+			};
+
+			var accessToken = _tokenService.GenerateAccessToken(userDto);
+			var refreshToken = _tokenService.GenerateRefreshToken();
+
+			await _refreshTokenService.SaveRefreshTokenAsync(user.Id, refreshToken);
+
+			_logger.LogInformation("Usuário {Username} autenticado com sucesso", user.Username);
+
+			return new AuthResponseDto
+			{
+				AccessToken = accessToken,
+				RefreshToken = refreshToken,
+				ExpiresAt = DateTime.UtcNow.AddMinutes(_lbConfig.AccessTokenExpirationMinutes),
+				User = new UserDto
 				{
 					Id = user.Id,
 					Username = user.Username,
 					Email = user.Email,
 					Roles = user.Roles
-				};
-
-				var accessToken = _tokenService.GenerateAccessToken(userDto);
-				var refreshToken = _tokenService.GenerateRefreshToken();
-
-				await _refreshTokenService.SaveRefreshTokenAsync(user.Id, refreshToken);
-
-				_logger.LogInformation("User {Username} authenticated successfully", user.Username);
-
-				return new AuthResponseDto
-				{
-					AccessToken = accessToken,
-					RefreshToken = refreshToken,
-					ExpiresAt = DateTime.UtcNow.AddMinutes(_lbConfig.AccessTokenExpirationMinutes),
-					User = new UserDto
-					{
-						Id = user.Id,
-						Username = user.Username,
-						Email = user.Email,
-						Roles = user.Roles
-					}
-				};
-			}
+				}
+			};
 		}
 
 		public async Task<AuthResponseDto?> RefreshTokenAsync(string refreshToken)
 		{
 			if (string.IsNullOrWhiteSpace(refreshToken))
 			{
-				_logger.LogWarning("RefreshTokenAsync called with empty token");
+				_logger.LogWarning("RefreshTokenAsync chamado com token em branco");
 				return null;
 			}
 
@@ -97,18 +93,38 @@ namespace PrjAuth.Application.Contracts.Implements
 				return null;
 			}
 
-			var ip = _httpContextAccessor?.HttpContext?.Request?.Headers["X-Forwarded-For"].FirstOrDefault()
-				?? _httpContextAccessor?.HttpContext?.Connection?.RemoteIpAddress?.ToString()
-				?? string.Empty;
+			var ip = _clientIpExtractor.GetClientIp();
 
-			var (replacement, newRaw) = await _refreshTokenService.RotateRefreshTokenAsync(refreshToken, ip);
 			try
 			{
+				var (replacement, newRaw) = await _refreshTokenService.RotateRefreshTokenAsync(refreshToken, ip);
+
+				if (replacement == null || string.IsNullOrEmpty(newRaw))
+				{
+					_logger.LogWarning("Falha ao rotacionar refresh token");
+					return null;
+				}
+
+				var userDto = await _userService.FindUserById(replacement.UserId);
+				if (userDto == null)
+				{
+					_logger.LogWarning("Usuário do refresh token não encontrado: {UserId}", replacement.UserId);
+					return null;
+				}
+
+				var accessToken = _tokenService.GenerateAccessToken(userDto);
+
+				return new AuthResponseDto
+				{
+					AccessToken = accessToken,
+					RefreshToken = newRaw,
+					ExpiresAt = DateTime.UtcNow.AddMinutes(_lbConfig.AccessTokenExpirationMinutes),
+					User = userDto
+				};
 			}
 			catch (SecurityTokenException ste)
 			{
 				_logger.LogWarning(ste, "Falha ao rotacionar refresh token: {Message}", ste.Message);
-				
 				return null;
 			}
 			catch (Exception ex)
@@ -116,29 +132,6 @@ namespace PrjAuth.Application.Contracts.Implements
 				_logger.LogError(ex, "Erro inesperado ao rotacionar refresh token");
 				return null;
 			}
-
-			if (replacement == null || string.IsNullOrEmpty(newRaw))
-			{
-				_logger.LogWarning("Falha ao rotacionar refresh token");
-				return null;
-			}
-
-			var userDto = await _userService.FindUserById(replacement.UserId);
-			if (userDto == null)
-			{
-				_logger.LogWarning("Usuário do refresh token não encontrado: {UserId}", replacement.UserId);
-				return null;
-			}
-
-			var accessToken = _tokenService.GenerateAccessToken(userDto);
-
-			return new AuthResponseDto
-			{
-				AccessToken = accessToken,
-				RefreshToken = newRaw,
-				ExpiresAt = DateTime.UtcNow.AddMinutes(_lbConfig.AccessTokenExpirationMinutes),
-				User = userDto
-			};
 		}
 
 		public async Task<bool> RevokeTokenAsync(string refreshToken)
@@ -150,39 +143,11 @@ namespace PrjAuth.Application.Contracts.Implements
 			if (token == null || !token.IsActive)
 				return false;
 
-			var ip = _httpContextAccessor?.HttpContext?.Request?.Headers["X-Forwarded-For"].FirstOrDefault()
-				?? _httpContextAccessor?.HttpContext?.Connection?.RemoteIpAddress?.ToString()
-				?? string.Empty;
+			var ip = _clientIpExtractor.GetClientIp();
 
 			await _refreshTokenService.RevokeRefreshTokenAsync(token, ip);
 
-			try
-			{
-				var authHeader = _httpContextAccessor?.HttpContext?.Request?.Headers["Authorization"].FirstOrDefault();
-				if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-				{
-					var rawToken = authHeader.Substring("Bearer ".Length).Trim();
-					var jti = _tokenService.GetJti(rawToken);
-					if (!string.IsNullOrEmpty(jti))
-					{
-						var expiration = _tokenService.GetTokenExpirationUtc(rawToken) ?? DateTime.UtcNow.AddMinutes(1);
-						await _tokenBlackListService.BlacklistTokenAsync(jti, expiration);
-					}
-				}
-				else
-				{
-					var jtiFromUser = _httpContextAccessor?.HttpContext?.User?.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
-					if (!string.IsNullOrEmpty(jtiFromUser))
-					{
-						var expiration = DateTime.UtcNow.AddMinutes(_lbConfig.AccessTokenExpirationMinutes);
-						await _tokenBlackListService.BlacklistTokenAsync(jtiFromUser, expiration);
-					}
-				}
-			}
-			catch (Exception ex)
-			{
-				_logger.LogWarning(ex, "Falha ao tentar colocar jti na blacklist durante logout");
-			}
+			await _tokenBlacklistHelper.TryBlacklistCurrentAccessTokenAsync();
 
 			return true;
 		}

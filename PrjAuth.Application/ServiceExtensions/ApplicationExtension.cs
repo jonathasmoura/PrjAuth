@@ -11,10 +11,10 @@ namespace PrjAuth.Application.ServiceExtensions
 	{
 		public static IServiceCollection AddDIApplicationServices(this IServiceCollection services, IConfiguration configuration)
 		{
-			
+
 			services.AddMemoryCache();
 
-			
+
 			var redisConfig = configuration.GetConnectionString("Redis") ?? configuration["Redis:Configuration"];
 			if (!string.IsNullOrWhiteSpace(redisConfig))
 			{
@@ -28,7 +28,7 @@ namespace PrjAuth.Application.ServiceExtensions
 				services.AddDistributedMemoryCache();
 			}
 
-			
+
 			services.AddSingleton<LoadBalancedTokenConfiguration>(sp =>
 			{
 				var cfg = sp.GetRequiredService<IConfiguration>();
@@ -47,6 +47,8 @@ namespace PrjAuth.Application.ServiceExtensions
 			services.AddScoped<ITokenValidator, SecurityHardenedTokenValidator>();
 			services.AddScoped<IOptimizedUserService, OptimizedUserService>();
 			services.AddScoped<ISecurityMonitoringService, SecurityMonitoringService>();
+			services.AddScoped<IClientIpExtractor, ClientIpExtractor>();
+			services.AddScoped<ITokenBlacklistHelper, TokenBlacklistHelper>();
 
 			services.AddHttpContextAccessor();
 
